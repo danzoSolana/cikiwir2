@@ -23,12 +23,10 @@ jobs:
           persist-credentials: true
           fetch-depth: 0
 
-      # --- BAGIAN YANG DIPERBAIKI ---
       - name: Setup Git Configuration
         run: |
           git config user.email "${{ github.repository_owner }}@users.noreply.github.com"
           git config user.name "${{ github.repository_owner }}"
-      # --- AKHIR BAGIAN YANG DIPERBAIKI ---
 
       - name: Update Timestamp File and Set Output
         id: timestamp_update
@@ -61,6 +59,35 @@ jobs:
             echo "commit_skipped=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Create Additional Random Files
+        id: create_files
+        run: |
+          REPO_OWNER="${{ github.repository_owner }}"
+          NUM_ADDITIONAL_FILES=8 
+          echo "Creating $NUM_ADDITIONAL_FILES additional random files..."
+          
+          created_files_array=()
+
+          for i in $(seq 1 $NUM_ADDITIONAL_FILES); do
+            if (( RANDOM % 2 == 0 )); then
+              ext="json"
+              content='{"file_id": "'$i'-'"$(openssl rand -hex 4)", "source": "'$REPO_OWNER'", "update_time": "'$(date '+%Y-%m-%d %H:%M:%S')'", "random_val": '$RANDOM'}'
+            else
+              ext="txt"
+              content="This is additional text file number $i by $REPO_OWNER. Update: $(date '+%Y-%m-%d %H:%M:%S'). Random value: $RANDOM"
+            fi
+            
+            filename="extra-file-${REPO_OWNER}-${i}-$(openssl rand -hex 4).${ext}"
+            
+            echo "$content" > "$filename"
+            echo "Created: $filename"
+            
+            created_files_array+=("$filename")
+          done
+          echo "Finished creating $NUM_ADDITIONAL_FILES files."
+
+          echo "created_files=$(printf "%s\n" "${created_files_array[@]}")" >> $GITHUB_OUTPUT
+
       - name: Prepare Commit
         run: |
           if [ "${{ steps.timestamp_update.outputs.commit_skipped }}" == "true" ]; then
@@ -69,8 +96,14 @@ jobs:
           fi
           commit_messages=("Update: ⏰" "Refresh: 🔄" "Renew: 🌟" "Revise: 📝" "Amend: 🛠" "Adjust: 🔧" "Change: 📈" "Modify: 🖊" "Transform: 🌀" "Revamp: 🌈")
           random_msg=${commit_messages[$RANDOM % ${#commit_messages[@]}]}
+          
           git add TIMESTAMP.txt DAILY_COMMIT_COUNT.txt
-          git commit -m "$random_msg - Daily Commit #${{ steps.timestamp_update.outputs.commit_count }} at ${{ steps.timestamp_update.outputs.current_time }}" || echo "No changes to commit."
+          
+          if [ -n "${{ steps.create_files.outputs.created_files }}" ]; then
+            printf "%s\n" "${{ steps.create_files.outputs.created_files }}" | xargs git add
+          fi
+          
+          git commit -m "$random_msg - Daily Commit #${{ steps.timestamp_update.outputs.commit_count }} at ${{ steps.timestamp_update.outputs.current_time }} (Updated 10 files total)" || echo "No changes to commit."
 
       - name: GitHub Push
         uses: ad-m/github-push-action@v0.6.0

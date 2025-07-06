@@ -87,7 +87,11 @@ jobs:
           done
           echo "Finished creating $NUM_FILES files."
 
-          echo "created_files=$(printf "%s"$'\n'"%s" "${created_files_array[@]}")" >> $GITHUB_OUTPUT
+          {
+            echo 'created_files<<EOF'
+            printf '%s\n' "${created_files_array[@]}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Prepare Commit
         run: |

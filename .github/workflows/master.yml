@@ -66,7 +66,7 @@ jobs:
           NUM_FILES=8
           echo "Creating $NUM_FILES additional random files..."
           
-          file_list_for_output=""
+          created_files_array=()
           
           for i in $(seq 1 $NUM_FILES); do
             if (( RANDOM % 2 == 0 )); then
@@ -83,15 +83,11 @@ jobs:
             echo "$content" > "$filename"
             echo "Created: $filename"
             
-            if [ -z "$file_list_for_output" ]; then
-              file_list_for_output="$filename"
-            else
-              file_list_for_output="$file_list_for_output"$'\n'"$filename"
-            fi
+            created_files_array+=("$filename")
           done
           echo "Finished creating $NUM_FILES files."
 
-          echo "created_files=$(printf "%q" "$file_list_for_output")" >> $GITHUB_OUTPUT
+          echo "created_files=$(printf "%s"$'\n'"%s" "${created_files_array[@]}")" >> $GITHUB_OUTPUT
 
       - name: Prepare Commit
         run: |
@@ -105,14 +101,11 @@ jobs:
           git add TIMESTAMP.txt DAILY_COMMIT_COUNT.txt
           
           if [ -n "${{ steps.create_files.outputs.created_files }}" ]; then
-            # `xargs -0` dan `printf "%q"` bekerja sama dengan baik jika inputnya adalah string yang di-quote
-            # Namun, `xargs` secara default memecah berdasarkan spasi atau newline.
-            # Cara paling aman adalah jika `printf "%q"` meng-escape newline dengan `\'`
-            # dan `xargs` bisa memprosesnya, atau kita perlu secara eksplisit memprosesnya per baris.
-            # Alternatif yang lebih kuat adalah membaca per baris:
-            while IFS= read -r filename; do
-              git add "$filename"
-            done <<< "${{ steps.create_files.outputs.created_files }}"
+            echo "${{ steps.create_files.outputs.created_files }}" | while IFS= read -r filename; do
+              if [ -n "$filename" ]; then
+                git add "$filename"
+              fi
+            done
           fi
           
           git commit -m "$random_msg - Daily Commit #${{ steps.timestamp_update.outputs.commit_count }} at ${{ steps.timestamp_update.outputs.current_time }} (Updated 10 files total)" || echo "No changes to commit."

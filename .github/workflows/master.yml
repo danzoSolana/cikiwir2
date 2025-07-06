@@ -63,15 +63,16 @@ jobs:
         id: create_files
         run: |
           REPO_OWNER="${{ github.repository_owner }}"
-          NUM_ADDITIONAL_FILES=8 
-          echo "Creating $NUM_ADDITIONAL_FILES additional random files..."
+          NUM_FILES=8
+          echo "Creating $NUM_FILES additional random files..."
           
           created_files_array=()
 
-          for i in $(seq 1 $NUM_ADDITIONAL_FILES); do
+          for i in $(seq 1 $NUM_FILES); do
             if (( RANDOM % 2 == 0 )); then
               ext="json"
-              content='{"file_id": "'$i'-'"$(openssl rand -hex 4)", "source": "'$REPO_OWNER'", "update_time": "'$(date '+%Y-%m-%d %H:%M:%S')'", "random_val": '$RANDOM'}'
+              content=$(printf '{"file_id": "%s-%s", "source": "%s", "update_time": "%s", "random_val": %s}' \
+                        "$i" "$(openssl rand -hex 4)" "$REPO_OWNER" "$(date '+%Y-%m-%d %H:%M:%S')" $(($RANDOM)))
             else
               ext="txt"
               content="This is additional text file number $i by $REPO_OWNER. Update: $(date '+%Y-%m-%d %H:%M:%S'). Random value: $RANDOM"
@@ -84,7 +85,7 @@ jobs:
             
             created_files_array+=("$filename")
           done
-          echo "Finished creating $NUM_ADDITIONAL_FILES files."
+          echo "Finished creating $NUM_FILES files."
 
           echo "created_files=$(printf "%s\n" "${created_files_array[@]}")" >> $GITHUB_OUTPUT
 

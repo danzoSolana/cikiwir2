@@ -62,7 +62,6 @@ jobs:
       - name: Create Additional Random Files
         id: create_files
         run: |
-          REPO_OWNER="${{ github.repository_owner }}"
           NUM_FILES=8
           echo "Creating $NUM_FILES additional random files..."
           
@@ -71,14 +70,14 @@ jobs:
           for i in $(seq 1 $NUM_FILES); do
             if (( RANDOM % 2 == 0 )); then
               ext="json"
-              content=$(printf '{"file_id": "%s-%s", "source": "%s", "update_time": "%s", "random_val": %s}' \
-                        "$i" "$(openssl rand -hex 4)" "$REPO_OWNER" "$(date '+%Y-%m-%d %H:%M:%S')" $(($RANDOM)))
+              content=$(printf '{"file_id": "%s-%s", "update_time": "%s", "random_val": %s}' \
+                        "$i" "$(openssl rand -hex 4)" "$(date '+%Y-%m-%d %H:%M:%S')" $(($RANDOM)))
             else
               ext="txt"
-              content="This is additional text file number $i by $REPO_OWNER. Update: $(date '+%Y-%m-%d %H:%M:%S'). Random value: $RANDOM"
+              content="This is an additional text file. Update: $(date '+%Y-%m-%d %H:%M:%S'). Random value: $RANDOM"
             fi
             
-            filename="extra-file-${REPO_OWNER}-${i}-$(openssl rand -hex 4).${ext}"
+            filename="$(openssl rand -hex 12).${ext}"
             
             echo "$content" > "$filename"
             echo "Created: $filename"
